@@ -1,13 +1,17 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI
+from pydantic import BaseModel
+import base64
 import io
 from pprint import pprint
 import math
-import base64
 
 from theExtractPack import extract, prompt
 
 app = FastAPI(title="Extraction API")
 
+class FileRequest(BaseModel):
+    name: str
+    contentBytes: str
 
 # ✅ Toggle this to enable/disable debug mode
 DEBUG_MODE = True
@@ -41,55 +45,27 @@ async def root():
 
 
 @app.post("/extract")
-async def extract_data(rfqFile: UploadFile = File(...)):
+async def extract_data(file: FileRequest):
     try:
-        filename = rfqFile.filename if rfqFile else ""
+        filename = file.name
 
-        # ✅ Read file
-        file_bytes = await rfqFile.read()
+        # ✅ Decode Base64 → REAL binary
+        file_bytes = base64.b64decode(file.contentBytes)
 
-        # =========================
-        # 🔥 DEBUG BLOCK
-        # =========================
-        print("\n===== DEBUG START =====")
         print("Filename:", filename)
-        print("Content-Type:", rfqFile.content_type)
-        print("File size (bytes):", len(file_bytes))
-        print("First 50 bytes:", file_bytes[:50])
+        print("First bytes:", file_bytes[:20])
 
         if file_bytes[:2] == b'PK':
-            print("✅ VALID XLSX (ZIP HEADER FOUND)")
+            print("✅ VALID XLSX")
         else:
-            print("❌ INVALID FILE - NOT ZIP")
+            print("❌ STILL INVALID")
 
-        # Save received file
-        with open("debug_received.xlsx", "wb") as f:
-            f.write(file_bytes)
-
-        print("✅ Debug file saved as debug_received.xlsx")
-        print("===== DEBUG END =====\n")
-
-        # 👉 STOP EARLY IF DEBUG MODE
-        if DEBUG_MODE:
-            return {
-                "status": "debug",
-                "filename": filename,
-                "size": len(file_bytes),
-                "first_bytes": str(file_bytes[:20])
-            }
-
-        # =========================
-        # ✅ EXTRACTION PIPELINE
-        # =========================
-
+        # ✅ Now your original pipeline works
         sorExtData = extract.extractSOR(io.BytesIO(file_bytes))
         bomExtData = extract.extractBOM(io.BytesIO(file_bytes))
 
-        finalData = extract.compileFinalData(
-            bomExtData, sorExtData
-        )
+        finalData = extract.compileFinalData(bomExtData, sorExtData)
 
-        # ✅ Core calculations
         coreDensity = extract.getDensity(
             finalData.get("coreMaterial"),
             finalData.get("coreMaterialType")
@@ -111,10 +87,7 @@ async def extract_data(rfqFile: UploadFile = File(...)):
         )
 
         finalDataInput = extract.compileFinalData(finalData, calREM_data)
-
-        # ✅ Sanitize output
         finalDataInput = _sanitize_for_json(finalDataInput)
-        calREM_data = _sanitize_for_json(calREM_data)
 
         pprint(finalDataInput)
 
