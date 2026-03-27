@@ -1,14 +1,19 @@
 from fastapi import FastAPI, File, UploadFile
 import io
 from pprint import pprint
-import math  # ✅ ADD
+import math
+import base64
 
 from theExtractPack import extract, prompt
 
 app = FastAPI(title="Extraction API")
 
 
-# ✅ ADD: convert NaN/Inf into None (JSON null) recursively
+# ✅ Toggle this to enable/disable debug mode
+DEBUG_MODE = True
+
+
+# ✅ Sanitize NaN/Inf → JSON safe
 def _sanitize_for_json(obj):
     if isinstance(obj, float):
         if math.isnan(obj) or math.isinf(obj):
@@ -21,7 +26,6 @@ def _sanitize_for_json(obj):
     if isinstance(obj, (list, tuple, set)):
         return [_sanitize_for_json(v) for v in obj]
 
-    # handles numpy/pandas scalars without importing numpy
     try:
         if hasattr(obj, "item"):
             return _sanitize_for_json(obj.item())
@@ -37,16 +41,47 @@ async def root():
 
 
 @app.post("/extract")
-async def extract_data(
-    rfqFile: UploadFile = File(...)
-):
+async def extract_data(rfqFile: UploadFile = File(...)):
     try:
         filename = rfqFile.filename if rfqFile else ""
 
-        # ✅ Read file once
+        # ✅ Read file
         file_bytes = await rfqFile.read()
 
-        # ✅ Run extractors
+        # =========================
+        # 🔥 DEBUG BLOCK
+        # =========================
+        print("\n===== DEBUG START =====")
+        print("Filename:", filename)
+        print("Content-Type:", rfqFile.content_type)
+        print("File size (bytes):", len(file_bytes))
+        print("First 50 bytes:", file_bytes[:50])
+
+        if file_bytes[:2] == b'PK':
+            print("✅ VALID XLSX (ZIP HEADER FOUND)")
+        else:
+            print("❌ INVALID FILE - NOT ZIP")
+
+        # Save received file
+        with open("debug_received.xlsx", "wb") as f:
+            f.write(file_bytes)
+
+        print("✅ Debug file saved as debug_received.xlsx")
+        print("===== DEBUG END =====\n")
+
+        # 👉 STOP EARLY IF DEBUG MODE
+        if DEBUG_MODE:
+            return {
+                "status": "debug",
+                "filename": filename,
+                "size": len(file_bytes),
+                "first_bytes": str(file_bytes[:20])
+            }
+
+        # =========================
+        # ✅ EXTRACTION PIPELINE
+        # =========================
+
         sorExtData = extract.extractSOR(io.BytesIO(file_bytes))
         bomExtData = extract.extractBOM(io.BytesIO(file_bytes))
 
@@ -75,27 +110,17 @@ async def extract_data(
             sleeveDensity
         )
 
-        finalDataInput = extract.compileFinalData(finalData,calREM_data)
+        finalDataInput = extract.compileFinalData(finalData, calREM_data)
 
-        # ✅ ADD: sanitize BEFORE returning response
+        # ✅ Sanitize output
         finalDataInput = _sanitize_for_json(finalDataInput)
         calREM_data = _sanitize_for_json(calREM_data)
 
         pprint(finalDataInput)
 
-        # ✅ Generate prompt
-        # generatedPrompt = prompt.generatePrompt(
-        #     finalDataInput,
-        # )
-
-        # ✅ ADD: sanitize prompt too (in case it contains NaN)
-        # generatedPrompt = _sanitize_for_json(generatedPrompt)
-
         return {
             "status": "success",
             "filename": filename,
-            "query_params": {
-            },
             "extracted_data": finalDataInput
         }
 
