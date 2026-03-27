@@ -84,12 +84,12 @@ async def extract_data(
         pprint(finalDataInput)
 
         # ✅ Generate prompt
-        generatedPrompt = prompt.generatePrompt(
-            finalDataInput,
-        )
+        # generatedPrompt = prompt.generatePrompt(
+        #     finalDataInput,
+        # )
 
         # ✅ ADD: sanitize prompt too (in case it contains NaN)
-        generatedPrompt = _sanitize_for_json(generatedPrompt)
+        # generatedPrompt = _sanitize_for_json(generatedPrompt)
 
         return {
             "status": "success",
