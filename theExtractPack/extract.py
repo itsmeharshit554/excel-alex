@@ -148,7 +148,7 @@ def extractBOM(filename):
     finalDf=prepareDfBOM(col1,col2,col3,col4,col5,col6,col7)
     print(finalDf)
     finalDict={
-        "coreName":finalDf.at[findRow(finalDf,"Core"),2],
+        "quantity":finalDf.at[findRow(finalDf,"Core"),2],
         "outerName":finalDf.at[findRow(finalDf,"Outer Sleeve"),2],
         "rubberName":finalDf.at[findRow(finalDf,"Rubber"),2],
         "coreMaterialType":finalDf.at[findRow(finalDf,"Core"),3],
