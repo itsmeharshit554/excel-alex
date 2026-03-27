@@ -84,7 +84,7 @@ def calculate_CoreOD_SleeveID_thick(CoreLen, SleeveLen, CoreWeight, SleeveWeight
 
     return {
         "CoreOD": round(CoreOD,2),
-        "CoreID": round(CoreID,2),
+        "SleeveID": round(SleeveID,2),
         "thickness": round(thickness,2)
     }
     
