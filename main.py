@@ -38,10 +38,7 @@ async def root():
 
 @app.post("/extract")
 async def extract_data(
-    rfqFile: UploadFile = File(...),
-    text1: str = "",
-    text2: str = "",
-    partType: str = "Outer Sleeve",
+    rfqFile: UploadFile = File(...)
 ):
     try:
         filename = rfqFile.filename if rfqFile else ""
@@ -88,10 +85,7 @@ async def extract_data(
 
         # ✅ Generate prompt
         generatedPrompt = prompt.generatePrompt(
-            partType,
             finalDataInput,
-            text1,
-            text2
         )
 
         # ✅ ADD: sanitize prompt too (in case it contains NaN)
@@ -101,13 +95,8 @@ async def extract_data(
             "status": "success",
             "filename": filename,
             "query_params": {
-                "text1": text1,
-                "text2": text2,
-                "partType": partType
             },
-            "extracted_data": finalDataInput,
-            "generated_prompt": generatedPrompt,
-            "calREM_data": calREM_data  # ✅ optional: include if you want
+            "extracted_data": finalDataInput
         }
 
     except Exception as e:
