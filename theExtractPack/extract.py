@@ -1,10 +1,5 @@
 from openpyxl import load_workbook
-from PIL import Image
 from io import BytesIO
-import os
-import cv2
-import numpy as np
-import easyocr
 import re
 import pandas as pd
 import math
@@ -35,65 +30,18 @@ def find_section_row(df, text):
             return r
     return None
 
-def extractImg(file,outerID):
-
-    excel_file = file
-    sheet_name = "7.BOM"
-    # output_dir = outputDir
-
-    # os.makedirs(output_dir, exist_ok=True)
-
-    wb = load_workbook(excel_file)
-    ws = wb[sheet_name]
-
-    # EasyOCR reader (lightweight)
-    reader = easyocr.Reader(['en'], gpu=False)
-
-    for idx, excel_img in enumerate(ws._images, start=1):
-
-        # ---- Extract image ----
-        pil_img = Image.open(BytesIO(excel_img._data())).convert("RGB")
-        # img_path = os.path.join(output_dir, f"image_{idx}.png")
-        # pil_img.save(img_path)
-
-        img = np.array(pil_img)
-
-        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-
-        gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-
-        # Light contrast (avoid thresholding)
-        gray = cv2.convertScaleAbs(gray, alpha=1.2, beta=0)
-
-        # ---- OCR ----
-        result = reader.readtext(
-            gray,
-            allowlist="0123456789.=dtAmm²Ø",
-            detail=1,
-            paragraph=False
-        )
-        extracted = []
-
-        for (_, text, prob) in result:
-            fixed = normalize_dimension_text(text)
-            extracted.append(fixed)
-            print(f"{fixed}")
-
-    print("\n✅ OCR + geometry inference completed successfully")
-    print(extracted)
-    thick=0
-    for x in extracted:
-        if(x[0]=='t'):
-            thick=x[2:]
-            thick=float(thick.replace("mm",""))
-            
-    print(f"The Thickness Extracted is: {thick}")
-    SleeveOD=float(outerID)
-    SleeveID=(SleeveOD-(thick *2))
-    print(f"The ID of Sleeve is: {SleeveID}")
-    res={"sleeveID_mm":SleeveID,
-         "thickness_mm":thick}
-    return res
+def calculate_CoreOD_SleeveID_thick(CoreLen,SleeveLen,CoreWeight, SleeveWeight,CoreID, SleeveOD,coreDensity,sleeveDensity):
+    coreVol=CoreWeight/coreDensity
+    sleeveVol=SleeveWeight/sleeveDensity
+    CoreOD=math.sqrt((4*coreVol)/ (3.14 * CoreLen) + (CoreID**2))
+    SleeveID=math.sqrt((SleeveOD**2)- ((4* sleeveVol)/ (3.14 * SleeveLen)))
+    thickness=(SleeveOD- SleeveID) / 2 
+    return {
+        "CoreOD":CoreOD,
+        "CoreID":CoreID,
+        "thickness":thickness
+    }
+    
 
 def findContent(df, anchor_value):
     mask = df == anchor_value

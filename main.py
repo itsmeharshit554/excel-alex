@@ -28,13 +28,10 @@ async def extract_data(
         # ✅ Run extractors
         sorExtData = extract.extractSOR(io.BytesIO(file_bytes))
         bomExtData = extract.extractBOM(io.BytesIO(file_bytes))
-        imgExtData = extract.extractImg(
-            io.BytesIO(file_bytes),
-            sorExtData.get("outerSleeveOD_mm")
-        )
+
 
         finalData = extract.compileFinalData(
-            imgExtData, bomExtData, sorExtData
+            bomExtData, sorExtData
         )
 
         # ✅ Core calculations
@@ -42,20 +39,13 @@ async def extract_data(
             finalData.get("coreMaterial"),
             finalData.get("coreMaterialType")
         )
-
-        coreOD = extract.getCoreOD(
-            coreDensity,
-            finalData.get("coreLength_mm"),
-            finalData.get("coreID_mm"),
-            finalData.get("coreWeight_g")
+        sleeveDensity = extract.getDensity(
+            finalData.get("outerMaterial"),
+            finalData.get("outerMaterialType")
         )
 
-        tempDict = {
-            "coreDensity_g/mm3": coreDensity,
-            "coreOD_mm": coreOD
-        }
-
-        finalDataInput = extract.compileFinalData(finalData, tempDict)
+        calREM_data= extract.calculate_CoreOD_SleeveID_thick(finalData.get("coreLength_mm"), finalData.get("outerLength_mm"), finalData.get("coreWeight_g"), finalData.get("outerWeight_g"), finalData.get("coreID_mm"),finalData.get("outerSleeveOD_mm"),  coreDensity, sleeveDensity)
+        finalDataInput = extract.compileFinalData(finalData, calREM_data)
 
         pprint(finalDataInput)
 
