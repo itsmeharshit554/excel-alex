@@ -4,6 +4,25 @@ import re
 import pandas as pd
 import math
 
+def to_float(value, mode="first"):
+    import re
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    nums = re.findall(r'\d+(?:\.\d+)?', str(value))
+    nums = [float(n) for n in nums]
+
+    if not nums:
+        raise ValueError(f"No numeric value found in: {value}")
+
+    if mode == "max":
+        return max(nums)
+    elif mode == "min":
+        return min(nums)
+    else:
+        return nums[0]
+    
 
 def extractLen(text):
     nums = re.findall(r'\d+(?:\.\d+)?', text)
@@ -30,16 +49,27 @@ def find_section_row(df, text):
             return r
     return None
 
-def calculate_CoreOD_SleeveID_thick(CoreLen,SleeveLen,CoreWeight, SleeveWeight,CoreID, SleeveOD,coreDensity,sleeveDensity):
-    coreVol=CoreWeight/coreDensity
-    sleeveVol=SleeveWeight/sleeveDensity
-    CoreOD=math.sqrt((4*coreVol)/ (3.14 * CoreLen) + (CoreID**2))
-    SleeveID=math.sqrt((SleeveOD**2)- ((4* sleeveVol)/ (3.14 * SleeveLen)))
-    thickness=(SleeveOD- SleeveID) / 2 
+def calculate_CoreOD_SleeveID_thick(CoreLen, SleeveLen, CoreWeight, SleeveWeight, CoreID, SleeveOD, coreDensity, sleeveDensity):
+    CoreLen = to_float(CoreLen,mode="max")
+    SleeveLen = to_float(SleeveLen,mode="max")
+    CoreWeight = float(CoreWeight)
+    SleeveWeight = float(SleeveWeight)
+    CoreID = to_float(CoreID,mode="max")
+    SleeveOD = to_float(SleeveOD,mode="max")
+    coreDensity = float(coreDensity)
+    sleeveDensity = float(sleeveDensity)
+
+    coreVol = CoreWeight / coreDensity
+    sleeveVol = SleeveWeight / sleeveDensity
+
+    CoreOD = math.sqrt((4 * coreVol) / (3.14 * CoreLen) + (CoreID ** 2))
+    SleeveID = math.sqrt((SleeveOD ** 2) - ((4 * sleeveVol) / (3.14 * SleeveLen)))
+    thickness = (SleeveOD - SleeveID) / 2
+
     return {
-        "CoreOD":CoreOD,
-        "CoreID":CoreID,
-        "thickness":thickness
+        "CoreOD": round(CoreOD,2),
+        "CoreID": round(CoreID,2),
+        "thickness": round(thickness,2)
     }
     
 
