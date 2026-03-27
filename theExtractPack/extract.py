@@ -4,6 +4,22 @@ import re
 import pandas as pd
 import math
 
+
+def open_excel(source):
+    """
+    source can be:
+      - file path (str)
+      - bytes / bytearray
+      - a file-like object (already BytesIO, etc.)
+    Returns: pd.ExcelFile with engine explicitly set.
+    """
+    if isinstance(source, (bytes, bytearray)):
+        source = BytesIO(source)
+
+    # Force engine so pandas doesn't try to guess
+    return pd.ExcelFile(source, engine="openpyxl")
+
+
 def to_float(value, mode="first"):
     import re
 
@@ -133,8 +149,9 @@ def splitAreaBOM(area):
     "outerPrepArea":outer_text[1].split(":")[1].strip()
     }
 
-def extractBOM(filename):
-    df=pd.read_excel(filename, sheet_name="7.BOM", header=None, dtype=str)
+def extractBOM(source):
+    excel = open_excel(source)
+    df = excel.parse(sheet_name="7.BOM", header=None, dtype=str)
     print(df)
 
     col1=findContent(df,"Name")
@@ -178,8 +195,9 @@ def extractBOM(filename):
     return finalDict
     
 
-def extractSOR(filename):
-    df=pd.read_excel(filename, sheet_name="6. PC1_Bushing_SOR", header=None, dtype=str)
+def extractSOR(source):
+    excel = open_excel(source)
+    df = excel.parse(sheet_name="6. PC1_Bushing_SOR", header=None, dtype=str)
     print(df)
     
     col1 = findContent(df, "Feature")
